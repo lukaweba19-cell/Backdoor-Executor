@@ -1,18 +1,19 @@
-# Makefile for iOS Roblox Executor
-# Replacement for CMake build system
+# Makefile for iOS Roblox Executor (cleaned & modular)
+# No-JIT, iOS-only, SUNC/UNC aligned
 
 .PHONY: all clean install directories info help
 
 # Build type (Debug or Release)
 BUILD_TYPE ?= Release
+
 # iOS SDK settings
 SDK ?= /Applications/Xcode_16.2.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.2.sdk
 ARCHS ?= arm64
 MIN_IOS_VERSION ?= 15.0
 
-# Feature flags - disabled for now to allow clean builds
-ENABLE_AI_FEATURES := 0
+# Feature flags
 ENABLE_ADVANCED_BYPASS ?= 1
+ENABLE_AI_FEATURES ?= 1
 USE_DOBBY ?= 1
 
 # Basic flags
@@ -20,34 +21,38 @@ ifeq ($(BUILD_TYPE),Debug)
 	OPT_FLAGS := -g -O0
 	DEFS := -DDEBUG_BUILD=1
 else
-	OPT_FLAGS := -O3 
+	OPT_FLAGS := -O3
 	DEFS := -DPRODUCTION_BUILD=1
 endif
 
-CXXFLAGS := -std=c++17 -fPIC $(OPT_FLAGS) -Wall -Wextra -fvisibility=hidden -ferror-limit=0 -fno-limit-debug-info
-CFLAGS := -fPIC $(OPT_FLAGS) -Wall -Wextra -fvisibility=hidden -ferror-limit=0 -fno-limit-debug-info
-OBJCXXFLAGS := -std=c++17 -fPIC $(OPT_FLAGS) -Wall -Wextra -fvisibility=hidden -ferror-limit=0 -fno-limit-debug-info
-LDFLAGS := -shared -undefined dynamic_lookup -framework Foundation -framework UIKit -framework CoreGraphics -framework CoreFoundation -framework Security -framework CoreML -framework Vision -framework Metal -framework MetalKit
+CXXFLAGS := -std=c++17 -fPIC $(OPT_FLAGS) -Wall -Wextra -fvisibility=hidden -ferror-limit=0
+CFLAGS := -fPIC $(OPT_FLAGS) -Wall -Wextra -fvisibility=hidden -ferror-limit=0
+OBJCXXFLAGS := -std=c++17 -fPIC $(OPT_FLAGS) -Wall -Wextra -fvisibility=hidden -ferror-limit=0
+LDFLAGS := -shared -undefined dynamic_lookup \
+	-framework Foundation -framework UIKit -framework CoreGraphics \
+	-framework CoreFoundation -framework Security -framework CoreML -framework Vision
 
-# Include paths - add VM includes for Lua headers and source directory
-INCLUDES := -I. -I/usr/local/include -I$(SDK)/usr/include -IVM/include -IVM/src -IVM/src/Luau -I$(SRC_DIR) -Iinclude
+# Include paths (updated for modular layout)
+INCLUDES := -I. -Iinclude -Ivm/include -Ivm/src -Ivm/src/Luau \
+	-Icore -Ihooks -Iutils -Isecurity -Imemory -Iexec -Iios \
+	-Iios/advanced_bypass -Iios/ui -Isecurity/anti_detection
 
-# iOS SDK flags for iOS 15+ compatibility
-PLATFORM_FLAGS := -isysroot $(SDK) -arch $(ARCHS) -mios-version-min=$(MIN_IOS_VERSION) -DIOS_VERSION=$(MIN_IOS_VERSION) -DLUAU_PLATFORM_IOS=1 -DLUAU_TARGET_IOS=1
+# iOS SDK flags
+PLATFORM_FLAGS := -isysroot $(SDK) -arch $(ARCHS) -mios-version-min=$(MIN_IOS_VERSION) \
+	-DIOS_VERSION=$(MIN_IOS_VERSION) -DLUAU_PLATFORM_IOS=1 -DLUAU_TARGET_IOS=1 \
+	-DNO_JIT=1 -DSUNC_COMPAT=1 -DUNC_COMPAT=1
 
-# Define output directories
+# Output
 BUILD_DIR := build
 OUTPUT_DIR := output
-LIB_NAME := libmylibrary.dylib
+LIB_NAME := libexecutor.dylib
 INSTALL_DIR := /usr/local/lib
 
-# Compiler commands
 CXX := clang++
 CC := clang
 OBJCXX := clang++
 LD := $(CXX) $(PLATFORM_FLAGS)
 
-# Add feature-specific flags
 ifeq ($(USE_DOBBY),1)
 	DEFS += -DUSE_DOBBY=1
 	LDFLAGS += -ldobby
@@ -67,104 +72,98 @@ else
 	DEFS += -DENABLE_ADVANCED_BYPASS=0
 endif
 
-# Set source file directories
-SRC_DIR := source
-CPP_DIR := $(SRC_DIR)/cpp
-VM_SRC_DIR := VM/src
 
-# Re-enable VM sources - fix the issues correctly as requested
+# Source discovery (modular layout)
+VM_SRC_DIR := vm/src
 VM_SOURCES := $(shell find $(VM_SRC_DIR) -name "*.cpp" 2>/dev/null)
 
-CPP_SOURCES := $(shell find $(CPP_DIR) -maxdepth 1 -name "*.cpp" 2>/dev/null)
-CPP_SOURCES += $(shell find $(CPP_DIR)/memory -name "*.cpp" 2>/dev/null)
-CPP_SOURCES += $(shell find $(CPP_DIR)/security -name "*.cpp" 2>/dev/null)
-CPP_SOURCES += $(shell find $(CPP_DIR)/hooks -name "*.cpp" 2>/dev/null)
-CPP_SOURCES += $(shell find $(CPP_DIR)/naming_conventions -name "*.cpp" 2>/dev/null)
-CPP_SOURCES += $(shell find $(CPP_DIR)/anti_detection -name "*.cpp" 2>/dev/null)
-CPP_SOURCES += $(shell find $(CPP_DIR)/exec -name "*.cpp" 2>/dev/null)
+CORE_SOURCES := $(shell find core -maxdepth 1 -name "*.cpp" 2>/dev/null)
+HOOKS_SOURCES := $(shell find hooks -name "*.cpp" 2>/dev/null)
+UTILS_SOURCES := $(shell find utils -name "*.cpp" 2>/dev/null)
+SECURITY_SOURCES := $(shell find security -name "*.cpp" 2>/dev/null)
+MEMORY_SOURCES := $(shell find memory -name "*.cpp" 2>/dev/null)
+EXEC_SOURCES := $(shell find exec -name "*.cpp" 2>/dev/null)
 
-# iOS-specific sources
-iOS_CPP_SOURCES :=
-iOS_MM_SOURCES :=
-# Check platform - Darwin is macOS/iOS and runner.os gives the GitHub Actions OS
-PLATFORM := $(shell uname -s)
-ifeq ($(PLATFORM),Darwin)
-	# On macOS/iOS, include iOS-specific files
-	iOS_CPP_SOURCES += $(shell find $(CPP_DIR)/ios -name "*.cpp" 2>/dev/null)
-	iOS_MM_SOURCES += $(shell find $(CPP_DIR)/ios -name "*.mm" 2>/dev/null)
-	
-	# Only include AI feature files if enabled
-	ifeq ($(ENABLE_AI_FEATURES),1)
-	iOS_CPP_SOURCES += $(shell find $(CPP_DIR)/ios/ai_features -name "*.cpp" 2>/dev/null)
-	iOS_MM_SOURCES += $(shell find $(CPP_DIR)/ios/ai_features -name "*.mm" 2>/dev/null)
-	endif
-	
-	# Only include advanced bypass files if enabled
-	ifeq ($(ENABLE_ADVANCED_BYPASS),1)
-	iOS_CPP_SOURCES += $(shell find $(CPP_DIR)/ios/advanced_bypass -name "*.cpp" 2>/dev/null)
-	iOS_MM_SOURCES += $(shell find $(CPP_DIR)/ios/advanced_bypass -name "*.mm" 2>/dev/null)
-	endif
+iOS_CPP_SOURCES := $(shell find ios -name "*.cpp" 2>/dev/null)
+iOS_MM_SOURCES := $(shell find ios -name "*.mm" 2>/dev/null)
+
+ifeq ($(ENABLE_ADVANCED_BYPASS),0)
+	iOS_CPP_SOURCES := $(filter-out ios/advanced_bypass/%,$(iOS_CPP_SOURCES))
+	iOS_MM_SOURCES := $(filter-out ios/advanced_bypass/%,$(iOS_MM_SOURCES))
 endif
 
-# Convert source files to object files
+ifeq ($(ENABLE_AI_FEATURES),0)
+	iOS_CPP_SOURCES := $(filter-out ios/ai_features/%,$(iOS_CPP_SOURCES))
+	iOS_MM_SOURCES := $(filter-out ios/ai_features/%,$(iOS_MM_SOURCES))
+endif
+
+# Objects
 VM_OBJECTS := $(VM_SOURCES:.cpp=.o)
-CPP_OBJECTS := $(CPP_SOURCES:.cpp=.o)
+CORE_OBJECTS := $(CORE_SOURCES:.cpp=.o)
+HOOKS_OBJECTS := $(HOOKS_SOURCES:.cpp=.o)
+UTILS_OBJECTS := $(UTILS_SOURCES:.cpp=.o)
+SECURITY_OBJECTS := $(SECURITY_SOURCES:.cpp=.o)
+MEMORY_OBJECTS := $(MEMORY_SOURCES:.cpp=.o)
+EXEC_OBJECTS := $(EXEC_SOURCES:.cpp=.o)
 iOS_CPP_OBJECTS := $(iOS_CPP_SOURCES:.cpp=.o)
 iOS_MM_OBJECTS := $(iOS_MM_SOURCES:.mm=.o)
 
-# Final list of object files
-OBJECTS := $(VM_OBJECTS) $(CPP_OBJECTS) $(iOS_CPP_OBJECTS) $(iOS_MM_OBJECTS)
+OBJECTS := $(VM_OBJECTS) $(CORE_OBJECTS) $(HOOKS_OBJECTS) $(UTILS_OBJECTS) \
+	$(SECURITY_OBJECTS) $(MEMORY_OBJECTS) $(EXEC_OBJECTS) \
+	$(iOS_CPP_OBJECTS) $(iOS_MM_OBJECTS)
 
-# Set dylib install name
 DYLIB_INSTALL_NAME := @executable_path/Frameworks/$(LIB_NAME)
 
-# Define targets
 all: directories $(OUTPUT_DIR)/$(LIB_NAME)
 
 directories:
-	@mkdir -p $(BUILD_DIR)
-	@mkdir -p $(OUTPUT_DIR)
+	@mkdir -p $(BUILD_DIR) $(OUTPUT_DIR)
 
 clean:
-	rm -rf $(OBJECTS) $(BUILD_DIR)/$(LIB_NAME) $(OUTPUT_DIR)/$(LIB_NAME)
+	rm -rf $(OBJECTS) $(BUILD_DIR) $(OUTPUT_DIR)
 
 install: all
 	@mkdir -p $(INSTALL_DIR)
 	cp $(OUTPUT_DIR)/$(LIB_NAME) $(INSTALL_DIR)/
 
 $(OUTPUT_DIR)/$(LIB_NAME): $(OBJECTS)
-	@echo "Creating dummy main.cpp for linking..."
+	@echo "Linking $(LIB_NAME)..."
 	@mkdir -p $(BUILD_DIR)
-	@echo 'extern "C" int main(int argc, char** argv) { return 0; }' > $(BUILD_DIR)/main.cpp
+	@echo 'extern "C" int main(int argc, char** argv) { (void)argc; (void)argv; return 0; }' > $(BUILD_DIR)/main.cpp
 	$(CXX) $(CXXFLAGS) $(PLATFORM_FLAGS) $(DEFS) $(INCLUDES) -c -o $(BUILD_DIR)/main.o $(BUILD_DIR)/main.cpp
 	$(LD) $(LDFLAGS) -o $@ $(BUILD_DIR)/main.o $^ -install_name $(DYLIB_INSTALL_NAME)
 	@echo "✅ Built $@"
 
 %.o: %.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $(PLATFORM_FLAGS) $(DEFS) $(INCLUDES) -c -o $@ $<
 
 %.o: %.mm
+	@mkdir -p $(dir $@)
 	$(OBJCXX) $(OBJCXXFLAGS) $(PLATFORM_FLAGS) $(DEFS) $(INCLUDES) -c -o $@ $<
 
-# Print build information
+%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(PLATFORM_FLAGS) $(DEFS) $(INCLUDES) -c -o $@ $<
+
 info:
 	@echo "Build Type: $(BUILD_TYPE)"
-	@echo "Platform: $(shell uname -s)"
-	@echo "VM Sources: $(VM_SOURCES)"
-	@echo "Exec Sources: $(CPP_SOURCES)"
-	@echo "iOS CPP Sources: $(iOS_CPP_SOURCES)"
-	@echo "iOS MM Sources: $(iOS_MM_SOURCES)"
+	@echo "Platform: iOS only (arm64)"
+	@echo "No-JIT: enabled"
+	@echo "SUNC/UNC: enabled"
+	@echo "VM Sources: $(words $(VM_SOURCES))"
+	@echo "Core Sources: $(words $(CORE_SOURCES))"
+	@echo "iOS MM Sources: $(words $(iOS_MM_SOURCES))"
+	@echo "Total Objects: $(words $(OBJECTS))"
 
-# Help target
 help:
 	@echo "Available targets:"
-	@echo "  all     - Build everything (default)"
+	@echo "  all     - Build the iOS .dylib (default)"
 	@echo "  clean   - Remove build artifacts"
-	@echo "  install - Install dylib to /usr/local/lib"
+	@echo "  install - Install dylib"
 	@echo "  info    - Print build information"
 	@echo ""
-	@echo "Configuration variables:"
-	@echo "  BUILD_TYPE=Debug|Release - Set build type (default: Release)"
-	@echo "  USE_DOBBY=0|1           - Enable Dobby hooking (default: 1)"
-	@echo "  ENABLE_AI_FEATURES=0|1   - Enable AI features (default: 0)"
-	@echo "  ENABLE_ADVANCED_BYPASS=0|1 - Enable advanced bypass (default: 1)"
+	@echo "Variables:"
+	@echo "  BUILD_TYPE=Debug|Release"
+	@echo "  USE_DOBBY=0|1"
+	@echo "  ENABLE_ADVANCED_BYPASS=0|1"
