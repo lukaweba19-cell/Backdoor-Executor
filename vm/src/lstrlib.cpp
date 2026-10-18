@@ -8,6 +8,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "Luau/Common.h"
+
 LUAU_DYNAMIC_FASTFLAGVARIABLE(LuauStringFormatFixC, false)
 
 // macro to `unsign' a character

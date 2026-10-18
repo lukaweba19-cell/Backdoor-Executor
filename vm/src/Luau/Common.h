@@ -4,9 +4,27 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// Fast flag system stubs
-#define LUAU_FASTFLAGVARIABLE(name) namespace FFlag { bool name = true; }
+// Fast flag system (compile-time defaults; no external flag service)
+#ifndef LUAU_FASTFLAG_SYSTEM
+#define LUAU_FASTFLAG_SYSTEM
+namespace FFlag {
+}
+namespace DFFlag {
+}
+#define LUAU_FASTFLAGVARIABLE(name, defaultValue) namespace FFlag { inline bool name = (defaultValue); }
 #define LUAU_FASTFLAG(name) FFlag::name
+#define LUAU_DYNAMIC_FASTFLAGVARIABLE(name, defaultValue) namespace DFFlag { inline bool name = (defaultValue); }
+#define LUAU_DYNAMIC_FASTFLAG(name) DFFlag::name
+#endif
+
+// Switch fallthrough
+#if defined(__cplusplus) && __cplusplus >= 201703L
+#define LUAU_FALLTHROUGH [[fallthrough]]
+#elif defined(__GNUC__) || defined(__clang__)
+#define LUAU_FALLTHROUGH __attribute__((fallthrough))
+#else
+#define LUAU_FALLTHROUGH ((void)0)
+#endif
 
 // LIKELY/UNLIKELY macros for optimization
 #if defined(__GNUC__) || defined(__clang__)
