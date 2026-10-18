@@ -4,11 +4,11 @@
 
 // Skip iOS framework integration in CI builds to avoid compilation issues
 #if defined(__APPLE__) && !defined(SKIP_IOS_INTEGRATION)
-#include "cpp/ios/ExecutionEngine.h"
-#include "cpp/ios/ScriptManager.h"
-#include "cpp/ios/JailbreakBypass.h"
-#include "cpp/ios/UIController.h"
-#include "cpp/init.hpp"
+#include "ExecutionEngine.h"
+#include "ScriptManager.h"
+#include "JailbreakBypass.h"
+#include "UIController.h"
+#include "init.hpp"
 
 // Global references to keep objects alive
 static std::shared_ptr<iOS::ExecutionEngine> g_executionEngine;
