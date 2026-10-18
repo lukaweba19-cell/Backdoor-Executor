@@ -11,8 +11,8 @@
 // Include necessary headers
 #include "../hooks/hooks.hpp"
 #include "../memory/mem.hpp"
-#include "../logging.hpp"
-#include "../globals.hpp"
+#include "logging.hpp"
+#include "globals.hpp"
 
 // No need to redefine BypassIntegrityChecks since it's already in globals.hpp
 

@@ -13,8 +13,8 @@
 #include <cstring>
 #include <cstdint>
 
-#include "../logging.hpp"
-#include "../error_handling.hpp"
+#include "logging.hpp"
+#include "error_handling.hpp"
 
 // Forward declarations for system functions and constants
 // This avoids including system headers in the header file which can cause macro conflicts

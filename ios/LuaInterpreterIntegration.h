@@ -12,7 +12,7 @@
 // Forward declare lua_State to avoid dependency issues
 struct lua_State;
 
-#include "../logging.hpp"
+#include "logging.hpp"
 
 namespace iOS {
     /**

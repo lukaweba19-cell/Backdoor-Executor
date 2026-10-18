@@ -15,7 +15,7 @@
 #include <sstream>
 #include <algorithm>
 
-#include "../globals.hpp"
+#include "globals.hpp"
 #include "../memory/mem.hpp"
 #include "../anti_detection/obfuscator.hpp"
 #include "../anti_detection/vm_detect.hpp"

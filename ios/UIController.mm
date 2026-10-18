@@ -3,7 +3,7 @@
 #include "ui/MainViewController.h"
 #include <iostream>
 #include <sstream>
-#include "../filesystem_utils.h"
+#include "filesystem_utils.h"
 
 #ifdef __OBJC__
 #import <UIKit/UIKit.h>

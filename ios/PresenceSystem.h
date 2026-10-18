@@ -11,8 +11,8 @@
 // Include necessary headers
 #include "../memory/mem.hpp"
 #include "../hooks/hooks.hpp"
-#include "../logging.hpp"
-#include "../globals.hpp"
+#include "logging.hpp"
+#include "globals.hpp"
 
 namespace iOS {
     /**

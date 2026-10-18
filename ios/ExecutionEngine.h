@@ -11,7 +11,7 @@
 #include <atomic>
 #include <unordered_map>
 #include "ScriptManager.h"
-#include "../filesystem_utils.h"
+#include "filesystem_utils.h"
 
 namespace iOS {
     /**
