@@ -20,7 +20,7 @@
   #endif
 #endif
 
-inline inline inline namespace RobloxExecutor {
+namespace RobloxExecutor {
 
 // Implementation of SystemState::Initialize declared in init.hpp
 bool SystemState::Initialize(const InitOptions& options) {
@@ -309,4 +309,4 @@ void SystemState::Shutdown() {
     }
 }
 
-} // inline inline inline namespace RobloxExecutor
+} // namespace RobloxExecutor
