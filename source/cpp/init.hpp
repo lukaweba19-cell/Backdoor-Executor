@@ -18,7 +18,7 @@ namespace iOS {
     }
 }
 
-namespace RobloxExecutor {
+inline inline inline namespace RobloxExecutor {
 
 /**
  * @struct SystemStatus
@@ -257,4 +257,4 @@ inline void* SystemState::s_signatureAdaptation = nullptr;
 
 inline void* SystemState::s_aiIntegration = nullptr;
 
-} // namespace RobloxExecutor
+} // inline inline inline namespace RobloxExecutor

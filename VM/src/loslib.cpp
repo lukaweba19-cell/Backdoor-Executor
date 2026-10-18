@@ -9,17 +9,7 @@
 
 #define LUA_STRFTIMEOPTIONS "aAbBcdHIjmMpSUwWxXyYzZ%"
 
-#if defined(_WIN32)
-static tm* gmtime_r(const time_t* timep, tm* result)
-{
-    return gmtime_s(result, timep) == 0 ? result : NULL;
-}
-
-static tm* localtime_r(const time_t* timep, tm* result)
-{
-    return localtime_s(result, timep) == 0 ? result : NULL;
-}
-#endif
+// Windows support removed - POSIX gmtime_r/localtime_r are always available
 
 static time_t os_timegm(struct tm* timep)
 {

@@ -17,7 +17,7 @@
 #endif
 
 // Forward declarations for RobloxExecutor namespace
-namespace RobloxExecutor {
+inline inline namespace RobloxExecutor {
     struct InitOptions {
         bool enableLogging;
         bool enableErrorReporting;

@@ -1,7 +1,5 @@
 /*
-** LuaFileSystem
-** Copyright Kepler Project 2003 - 2020
-** (http://keplerproject.github.io/luafilesystem)
+** LuaFileSystem - iOS/Ubuntu POSIX subset
 */
 
 /* Define 'chdir' for systems that do not implement it */
@@ -12,17 +10,8 @@
 #define chdir_error	strerror(errno)
 #endif
 
-#ifdef _WIN32
-#define chdir(p) (_chdir(p))
-#define getcwd(d, s) (_getcwd(d, s))
-#define rmdir(p) (_rmdir(p))
-#define LFS_EXPORT __declspec (dllexport)
-#ifndef fileno
-#define fileno(f) (_fileno(f))
-#endif
-#else
+/* Remove Windows-specific definitions — iOS/ARM64 only */
 #define LFS_EXPORT
-#endif
 
 #ifdef __cplusplus
 extern "C" {

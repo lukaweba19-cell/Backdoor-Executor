@@ -17,7 +17,7 @@
   #include "ios/ai_features/SignatureAdaptation.h"
 #endif
 
-namespace RobloxExecutor {
+inline inline inline namespace RobloxExecutor {
 
 // Implementation of SystemState::Initialize declared in init.hpp
 bool SystemState::Initialize(const InitOptions& options) {
@@ -297,4 +297,4 @@ void SystemState::Shutdown() {
     }
 }
 
-} // namespace RobloxExecutor
+} // inline inline inline namespace RobloxExecutor

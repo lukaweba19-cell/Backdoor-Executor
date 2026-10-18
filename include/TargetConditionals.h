@@ -26,7 +26,6 @@
 
 /*
  * TARGET_OS_MAC is set to 1 in all Apple OS variants.
- * TARGET_OS_WIN32 is set to 1 for Windows.
  * TARGET_OS_UNIX is set to 1 for all Unix-like OSes.
  *
  * TARGET_OS_OSX: OS X
@@ -49,7 +48,6 @@
  */
 
 #define TARGET_OS_MAC               1
-#define TARGET_OS_WIN32             0
 #define TARGET_OS_UNIX              0
 
 #define TARGET_OS_OSX               0

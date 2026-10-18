@@ -39,7 +39,7 @@
 #define __TSD_MACH_THREAD_SELF 3
 #define __TSD_THREAD_QOS_CLASS 4
 #define __TSD_RETURN_TO_KERNEL 5
-/* slot 6 is reserved for Windows/WINE compatibility reasons */
+/* slot 6 is reserved */
 #define __TSD_PTR_MUNGE 7
 #define __TSD_MACH_SPECIAL_REPLY 8
 #define __TSD_SEMAPHORE_CACHE 9

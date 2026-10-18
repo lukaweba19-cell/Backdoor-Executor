@@ -2,16 +2,7 @@
 // This code is based on Lua 5.x implementation licensed under MIT License; see lua_LICENSE.txt for details
 #include "lua.h"
 
-#ifdef _WIN32
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#endif
-
+// iOS/Ubuntu only - Windows support removed
 #ifdef __APPLE__
 #include <mach/mach.h>
 #include <mach/mach_time.h>
@@ -22,11 +13,7 @@
 
 static double clock_period()
 {
-#if defined(_WIN32)
-    LARGE_INTEGER result = {};
-    QueryPerformanceFrequency(&result);
-    return 1.0 / double(result.QuadPart);
-#elif defined(__APPLE__)
+#if defined(__APPLE__)
     mach_timebase_info_data_t result = {};
     mach_timebase_info(&result);
     return double(result.numer) / double(result.denom) * 1e-9;
@@ -39,11 +26,7 @@ static double clock_period()
 
 static double clock_timestamp()
 {
-#if defined(_WIN32)
-    LARGE_INTEGER result = {};
-    QueryPerformanceCounter(&result);
-    return double(result.QuadPart);
-#elif defined(__APPLE__)
+#if defined(__APPLE__)
     return double(mach_absolute_time());
 #elif defined(__linux__) || defined(__FreeBSD__)
     timespec now;
