@@ -8,14 +8,13 @@
 #include <iostream>
 #include <mutex>
 
-// Forward declarations for Objective-C runtime types
+// Objective-C runtime (system SDK) + project isolation header
 #ifdef __APPLE__
-#include "../objc_isolation.h"
-#include "../../include/objc/runtime.h"
+#include "objc_isolation.h"
+#include <objc/runtime.h>
 typedef void* HookIMP; // Use custom name to avoid conflict with system IMP
 #else
-#include "../objc_isolation.h"
-#include "../../include/objc/runtime.h"
+#include "objc_isolation.h"
 typedef void* HookIMP;
 #endif
 

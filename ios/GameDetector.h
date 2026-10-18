@@ -1,7 +1,7 @@
 // Game detection and monitoring
 #pragma once
 
-#include "../objc_isolation.h"
+#include "objc_isolation.h"
 #include "PatternScanner.h"
 #include "MemoryAccess.h"
 #include "mach_compat.h"

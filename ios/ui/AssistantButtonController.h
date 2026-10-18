@@ -5,7 +5,7 @@
 #include <functional>
 #include <memory>
 #include <unordered_map>
-#include "../../objc_isolation.h"
+#include "objc_isolation.h"
 
 // Forward declarations
 namespace iOS {

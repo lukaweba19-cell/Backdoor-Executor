@@ -1,7 +1,7 @@
 // Method swizzling for Objective-C runtime
 #pragma once
 
-#include "../objc_isolation.h"
+#include "objc_isolation.h"
 
 #ifdef __OBJC__
 #import <Foundation/Foundation.h>

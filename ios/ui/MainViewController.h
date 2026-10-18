@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../objc_isolation.h"
+#include "objc_isolation.h"
 #include <string>
 #include <memory>
 #include <functional>
