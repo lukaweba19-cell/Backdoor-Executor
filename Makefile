@@ -6,10 +6,14 @@
 # Build type (Debug or Release)
 BUILD_TYPE ?= Release
 
-# iOS SDK settings
-SDK ?= /Applications/Xcode_16.2.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.2.sdk
+# iOS SDK settings (SDK resolved via xcrun when not passed)
 ARCHS ?= arm64
 MIN_IOS_VERSION ?= 15.0
+SDK ?= $(shell xcrun --sdk iphoneos --show-sdk-path 2>/dev/null)
+
+ifeq ($(strip $(SDK)),)
+$(error iPhoneOS SDK not found. Install Xcode or pass SDK=/path/to/iPhoneOS.sdk)
+endif
 
 # Feature flags
 ENABLE_ADVANCED_BYPASS ?= 1
@@ -33,7 +37,7 @@ LDFLAGS := -shared -undefined dynamic_lookup \
 	-framework CoreFoundation -framework Security -framework CoreML -framework Vision
 
 # Include paths (updated for modular layout)
-INCLUDES := -I. -Iinclude -Ivm/include -Ivm/src -Ivm/src/Luau \
+INCLUDES := -I. -Ivm/include -Ivm/src -Ivm/src/Luau \
 	-Icore -Ihooks -Iutils -Isecurity -Imemory -Iexec -Iios \
 	-Iios/advanced_bypass -Iios/ui -Isecurity/anti_detection
 
@@ -53,9 +57,11 @@ CC := clang
 OBJCXX := clang++
 LD := $(CXX) $(PLATFORM_FLAGS)
 
+DOBBY_DIR ?= external/dobby
 ifeq ($(USE_DOBBY),1)
 	DEFS += -DUSE_DOBBY=1
-	LDFLAGS += -ldobby
+	INCLUDES += -I$(DOBBY_DIR)/include
+	LDFLAGS += -L$(DOBBY_DIR)/lib -ldobby
 else
 	DEFS += -DUSE_DOBBY=0
 endif
