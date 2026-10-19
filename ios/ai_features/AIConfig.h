@@ -80,23 +80,23 @@ public:
         High       // High quality model (slower, more accurate)
     };
     
+
+    // Generic option accessors (used by AI subsystems)
+    std::string GetOption(const std::string& key, const std::string& defaultValue) const {
+        auto it = m_options.find(key);
+        return (it != m_options.end()) ? it->second : defaultValue;
+    }
+    
+    void SetOption(const std::string& key, const std::string& value) {
+        m_options[key] = value;
+    }
+
 private:
     // Singleton instance
     static AIConfig* s_instance;
     
     // Configuration options
     std::map<std::string, std::string> m_options;
-    
-    // Helper to get option with default value
-    std::string GetOption(const std::string& key, const std::string& defaultValue) const {
-        auto it = m_options.find(key);
-        return (it != m_options.end()) ? it->second : defaultValue;
-    }
-    
-    // Helper to set option
-    void SetOption(const std::string& key, const std::string& value) {
-        m_options[key] = value;
-    }
     
     // Convert learning mode to string
     std::string LearningModeToString(LearningMode mode) const {
