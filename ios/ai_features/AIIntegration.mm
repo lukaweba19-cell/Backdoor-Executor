@@ -5,8 +5,8 @@
 #include "ScriptAssistant.h"
 #include "SignatureAdaptation.h"
 #include "OnlineService.h"
-#include "../ui/MainViewController.h"
-#include "../ui/VulnerabilityViewController.h"
+#include "ui/MainViewController.h"
+#include "ui/VulnerabilityViewController.h"
 #include "vulnerability_detection/VulnerabilityDetector.h"
 #include <iostream>
 #include <string>

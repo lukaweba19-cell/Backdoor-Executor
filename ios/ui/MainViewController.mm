@@ -1,5 +1,5 @@
 // Improved MainViewController implementation that preserves original functionality
-#include "../../ios_compat.h"
+#include "ios_compat.h"
 #include "MainViewController.h"
 #include <iostream>
 

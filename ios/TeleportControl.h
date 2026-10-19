@@ -9,8 +9,8 @@
 #include <memory>
 
 // Include necessary headers
-#include "../hooks/hooks.hpp"
-#include "../memory/mem.hpp"
+#include "hooks.hpp"
+#include "mem.hpp"
 #include "logging.hpp"
 #include "globals.hpp"
 

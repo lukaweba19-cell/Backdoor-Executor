@@ -1,8 +1,8 @@
 #include "PresenceSystem.h"
 #include "MemoryAccess.h"
-#include "../security/anti_tamper.hpp"
-#include "../anti_detection/anti_debug.hpp"
-#include "../dobby_wrapper.cpp"
+#include "anti_tamper.hpp"
+#include "anti_detection/anti_debug.hpp"
+#include "dobby_wrapper.h"
 
 #include <mach/mach.h>
 #include <mach-o/dyld.h>

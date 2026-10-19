@@ -18,7 +18,7 @@
 #endif
 
 // Now include our own header which uses forward declarations
-#include "../security/anti_tamper.hpp"
+#include "anti_tamper.hpp"
 
 namespace Security {
 

@@ -1,9 +1,9 @@
-#include "../../memory/ci_compat.h"
+#include "ci_compat.h"
 #include "WebKitExploit.h"
 #include "MethodSwizzlingExploit.h"
 #include "DynamicMessageDispatcher.h"
 #include "LoadstringSupport.h"
-#include "../../ios_compat.h"
+#include "ios_compat.h"
 #include "ExecutionIntegration.h"
 #include <string>
 #include <memory>
@@ -16,11 +16,11 @@
 #include <algorithm>
 
 // Include headers
-#include "../GameDetector.h"
-#include "../../hooks/hooks.hpp"
-#include "../../memory/mem.hpp"
-#include "../../memory/signature.hpp"
-#include "../PatternScanner.h"
+#include "GameDetector.h"
+#include "hooks.hpp"
+#include "mem.hpp"
+#include "signature.hpp"
+#include "PatternScanner.h"
 
 namespace iOS {
     namespace AdvancedBypass {

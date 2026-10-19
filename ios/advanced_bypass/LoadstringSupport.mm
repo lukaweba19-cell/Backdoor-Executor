@@ -1,4 +1,4 @@
-#include "../../ios_compat.h"
+#include "ios_compat.h"
 #include "LoadstringSupport.h"
 #include <string>
 #include <vector>

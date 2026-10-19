@@ -1,4 +1,4 @@
-#include "../../ios_compat.h"
+#include "ios_compat.h"
 #include "DynamicMessageDispatcher.h"
 #include <string>
 #include <iostream>

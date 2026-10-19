@@ -16,14 +16,14 @@
 #include <algorithm>
 
 #include "globals.hpp"
-#include "../memory/mem.hpp"
-#include "../anti_detection/obfuscator.hpp"
-#include "../anti_detection/vm_detect.hpp"
+#include "mem.hpp"
+#include "anti_detection/obfuscator.hpp"
+#include "anti_detection/vm_detect.hpp"
 
-#include "../luau/lua.h"
-#include "../luau/lstate.h"
-#include "../luau/Luau/Compiler.h"
-#include "../luau/Luau/BytecodeBuilder.h"
+#include "lua.h"
+#include "lstate.h"
+#include "Luau/Compiler.h"
+#include "Luau/BytecodeBuilder.h"
 
 // Enhanced bytecode encoder with randomization for anti-detection
 class EnhancedBytecodeEncoder : public Luau::BytecodeEncoder {

@@ -1,8 +1,8 @@
 #include "LuaInterpreterIntegration.h"
 #include "advanced_bypass/HttpClient.h"
-#include "../security/anti_tamper.hpp"
-#include "../anti_detection/anti_debug.hpp"
-#include "../utils/naming_conventions/script_preprocessor.h"
+#include "anti_tamper.hpp"
+#include "anti_detection/anti_debug.hpp"
+#include "naming_conventions/script_preprocessor.h"
 #include "TeleportControl.h"
 #include "PresenceSystem.h"
 

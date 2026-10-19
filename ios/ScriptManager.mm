@@ -1,5 +1,5 @@
 
-#include "../ios_compat.h"
+#include "ios_compat.h"
 #include "ScriptManager.h"
 #include <iostream>
 #include <fstream>

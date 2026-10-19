@@ -1,5 +1,5 @@
 
-#include "../../ios_compat.h"
+#include "ios_compat.h"
 #include "HttpClient.h"
 #include "LoadstringSupport.h"
 #include "ExecutionIntegration.h"

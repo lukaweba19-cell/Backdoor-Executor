@@ -1,5 +1,5 @@
 #include "AssistantButtonController.h"
-#include "../ai_features/AIIntegration.h"
+#include "AIIntegration.h"
 #include <iostream>
 #include <chrono>
 #include <ctime>

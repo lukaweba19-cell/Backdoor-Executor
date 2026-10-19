@@ -1,6 +1,6 @@
 // JailbreakBypass.mm - Production-grade implementation of jailbreak detection bypass
 #include "JailbreakBypass.h"
-#include "../dobby_wrapper.cpp"
+#include "dobby_wrapper.h"
 #include <iostream>
 #include <mutex>
 #include <thread>

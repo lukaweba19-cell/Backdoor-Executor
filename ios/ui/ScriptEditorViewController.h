@@ -6,7 +6,7 @@
 @class UIButton;
 @class UIColor;
 
-#include "../../ios_compat.h"
+#include "ios_compat.h"
 #include <string>
 #include <vector>
 #include <functional>

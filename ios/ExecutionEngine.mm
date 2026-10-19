@@ -1,7 +1,7 @@
 #include "ios_impl_compat.h"
 #include "ExecutionEngine.h"
 #include "LuaInterpreterIntegration.h"
-#include "../utils/naming_conventions/script_preprocessor.h"
+#include "naming_conventions/script_preprocessor.h"
 #include <iostream>
 #include <chrono>
 #include <thread>
