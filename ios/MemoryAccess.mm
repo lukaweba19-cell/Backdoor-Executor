@@ -110,7 +110,8 @@ namespace iOS {
         if (moduleName.empty() || moduleName == "main" || moduleName == "RobloxPlayer" ||
             moduleName == "Roblox") {
             Dl_info info;
-            if (dladdr((void*)&MemoryAccess::GetModuleBase, &info) && info.dli_fbase) {
+            uintptr_t (*baseFn)(const std::string&) = &MemoryAccess::GetModuleBase;
+            if (dladdr((void*)baseFn, &info) && info.dli_fbase) {
                 // Prefer dyld image 0 (main executable)
                 uint32_t count = _dyld_image_count();
                 if (count > 0) {
@@ -186,7 +187,9 @@ namespace iOS {
                 const struct mach_header_64* hdr = nullptr;
                 // Use dladdr on a known symbol in this image
                 Dl_info info;
-                if (dladdr((void*)&MemoryAccess::GetModuleSize, &info) && info.dli_fbase) {
+                // Disambiguate overload: take address of the string-parameter overload via lambda body symbol
+                size_t (*sizeFn)(const std::string&) = &MemoryAccess::GetModuleSize;
+                if (dladdr((void*)sizeFn, &info) && info.dli_fbase) {
                     base = (uintptr_t)info.dli_fbase;
                 }
             }
