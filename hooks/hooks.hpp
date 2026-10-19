@@ -63,7 +63,14 @@ namespace Hooks {
         
     private:
         // Keep track of hooked methods
-        static std::map<std::string, std::pair<Class, SEL>> s_hookedMethods;
+#ifdef __APPLE__
+        struct HookedMethodInfo {
+            Class cls;
+            SEL selector;
+            HookIMP originalIMP;
+        };
+        static std::map<std::string, HookedMethodInfo> s_hookedMethods;
         static std::mutex s_methodMutex;
+#endif
     };
 }

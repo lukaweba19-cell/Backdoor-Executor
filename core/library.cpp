@@ -1,48 +1,43 @@
 #include "library.hpp"
+
 #include <cstring>
 #include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
+
 #ifdef __APPLE__
 #include <mach/mach.h>
 #include <unistd.h>
 #endif
-namespace DobbyWrapper { void* Hook(void* a, void* b); }
 
-// Skip iOS framework integration in CI builds to avoid compilation issues
-#if defined(__APPLE__) && !defined(SKIP_IOS_INTEGRATION)
+#include "dobby_wrapper.h"
+#include "init.hpp"
 #include "ExecutionEngine.h"
 #include "ScriptManager.h"
 #include "JailbreakBypass.h"
 #include "UIController.h"
-#include "init.hpp"
+#include "MemoryAccess.h"
 
-// Global references to keep objects alive
-static std::shared_ptr<iOS::ExecutionEngine> g_executionEngine;
-static std::shared_ptr<iOS::ScriptManager> g_scriptManager;
-static std::unique_ptr<iOS::UIController> g_uiController;
-#else
-// Define dummy types for CI build
-namespace iOS {
-    class ExecutionEngine {};
-    class ScriptManager {};
-    class UIController {};
-}
-// Empty global references for CI build
-static void* g_executionEngine = nullptr;
-static void* g_scriptManager = nullptr;
-static void* g_uiController = nullptr;
+#if defined(ENABLE_AI_FEATURES) && ENABLE_AI_FEATURES
+#include "HybridAISystem.h"
+#include "ScriptAssistant.h"
+#include "AISystemInitializer.h"
+
+
 #endif
 
-// Initialize the library - called from dylib_initializer
-static bool InitializeLibrary() {
+namespace {
+
+std::shared_ptr<iOS::ExecutionEngine> g_executionEngine;
+std::shared_ptr<iOS::ScriptManager> g_scriptManager;
+std::unique_ptr<iOS::UIController> g_uiController;
+bool g_aiEnabled = true;
+
+bool InitializeLibrary() {
     std::cout << "Initializing Roblox Executor library..." << std::endl;
-    
-#if 0  /* CI stubs removed - iOS only */
-    // Simplified initialization for CI builds
-    std::cout << "CI build - skipping full initialization" << std::endl;
-    return true;
-#else
+
     try {
-        // Set up initialization options
         RobloxExecutor::InitOptions options;
         options.enableLogging = true;
         options.enableErrorReporting = true;
@@ -50,216 +45,194 @@ static bool InitializeLibrary() {
         options.enableSecurity = true;
         options.enableJailbreakBypass = true;
         options.enableUI = true;
-        
-        // Initialize the executor system
+#if defined(ENABLE_AI_FEATURES) && ENABLE_AI_FEATURES
+        options.enableAI = true;
+#endif
+
         if (!RobloxExecutor::SystemState::Initialize(options)) {
-            std::cerr << "Failed to initialize RobloxExecutor" << std::endl;
+            std::cerr << "Failed to initialize RobloxExecutor::SystemState" << std::endl;
             return false;
         }
-        
-        // Keep references to key components
+
         g_executionEngine = RobloxExecutor::SystemState::GetExecutionEngine();
         g_scriptManager = RobloxExecutor::SystemState::GetScriptManager();
         g_uiController = std::move(RobloxExecutor::SystemState::GetUIController());
-        
+
+        if (!g_executionEngine) {
+            std::cerr << "ExecutionEngine not available after init" << std::endl;
+            return false;
+        }
+
         std::cout << "Roblox Executor library initialized successfully" << std::endl;
         return true;
     } catch (const std::exception& ex) {
         std::cerr << "Exception during library initialization: " << ex.what() << std::endl;
         return false;
     }
+}
+
+} // namespace
+
+extern "C" {
+
+__attribute__((constructor))
+void dylib_initializer() {
+    std::cout << "Roblox Executor dylib loaded" << std::endl;
+    if (!InitializeLibrary()) {
+        std::cerr << "Failed to initialize library" << std::endl;
+    }
+}
+
+__attribute__((destructor))
+void dylib_finalizer() {
+    std::cout << "Roblox Executor dylib unloading" << std::endl;
+    RobloxExecutor::SystemState::Shutdown();
+    g_executionEngine.reset();
+    g_scriptManager.reset();
+    g_uiController.reset();
+    DobbyWrapper::UnhookAll();
+}
+
+int luaopen_mylibrary(void* L) {
+    (void)L;
+    return 1;
+}
+
+bool ExecuteScript(const char* script) {
+    if (!script || !g_executionEngine) {
+        return false;
+    }
+    try {
+        auto result = g_executionEngine->Execute(std::string(script));
+        return result.m_success;
+    } catch (const std::exception& ex) {
+        std::cerr << "ExecuteScript exception: " << ex.what() << std::endl;
+        return false;
+    }
+}
+
+bool WriteMemory(void* address, const void* data, size_t size) {
+    if (!address || !data || size == 0) {
+        return false;
+    }
+    return iOS::MemoryAccess::WriteMemory(address, data, size);
+}
+
+bool ProtectMemory(void* address, size_t size, int protection) {
+    if (!address || size == 0) {
+        return false;
+    }
+#ifdef __APPLE__
+    return iOS::MemoryAccess::ProtectMemory(address, size, protection);
+#else
+    (void)protection;
+    return false;
 #endif
 }
 
-// The function called when the library is loaded (constructor attribute)
-extern "C" {
-    __attribute__((constructor))
-    void dylib_initializer() {
-        std::cout << "Roblox Executor dylib loaded" << std::endl;
-        
-        // Initialize the library
-        if (!InitializeLibrary()) {
-            std::cerr << "Failed to initialize library" << std::endl;
-        }
-    }
-    
-    __attribute__((destructor))
-    void dylib_finalizer() {
-        std::cout << "Roblox Executor dylib unloading" << std::endl;
-        
-        // Clean up resources
-        RobloxExecutor::SystemState::Shutdown();
-        
-        // Clear global references
-        g_executionEngine.reset();
-        g_scriptManager.reset();
-        g_uiController.reset();
-    }
-    
-    // Lua module entry point
-    int luaopen_mylibrary(void* L) {
-        std::cout << "Lua module loaded: mylibrary" << std::endl;
-        
-        // This will be called when the Lua state loads our library
-        return 1; // Return 1 to indicate success
-    }
-    
-    // Script execution API
-    bool ExecuteScript(const char* script) {
-        if (!script) return false;
-        
-        #if 0  /* CI stubs removed - iOS only */
-        // Stub implementation for CI builds
-        std::cout << "CI build - ExecuteScript stub called" << std::endl;
-        return true;
-        #else
-        if (!g_executionEngine) return false;
-        
-        try {
-            // Execute script
-            auto result = g_executionEngine->Execute(script);
-            return result.m_success;
-        } catch (const std::exception& ex) {
-            std::cerr << "Exception during script execution: " << ex.what() << std::endl;
-            return false;
-        }
-        #endif
-    }
-    
-    // Memory manipulation
-    bool WriteMemory(void* address, const void* data, size_t size) {
-        if (!address || !data || size == 0) return false;
-        
-        try {
-            // Validate target address is writeable (implement as needed)
-            // Copy data to target address
-            memcpy(address, data, size);
-            return true;
-        } catch (...) {
-            return false;
-        }
-    }
-    
-    bool ProtectMemory(void* address, size_t size, int protection) {
-        if (!address || size == 0) return false;
-        
-        #if 0  /* CI stubs removed - iOS only */
-        // Stub implementation for CI builds
-        std::cout << "CI build - ProtectMemory stub called" << std::endl;
-        return true;
-        #else
-        // Platform-specific memory protection implementation
-        #ifdef __APPLE__
-        // iOS memory protection
-        vm_prot_t prot = 0;
-        if (protection & 1) prot |= VM_PROT_READ;
-        if (protection & 2) prot |= VM_PROT_WRITE;
-        if (protection & 4) prot |= VM_PROT_EXECUTE;
-        
-        kern_return_t result = vm_protect(mach_task_self(), (vm_address_t)address, size, FALSE, prot);
-        return result == KERN_SUCCESS;
-        #else
-        // Add other platform implementations as needed
-        return false;
-        #endif
-        #endif
-    }
-    
-    // Method hooking - delegates to DobbyWrapper
-    void* HookRobloxMethod(void* original, void* replacement) {
-        if (!original || !replacement) return nullptr;
-#if defined(USE_DOBBY) && USE_DOBBY
-        return DobbyWrapper::Hook(original, replacement);
-#else
-        (void)original; (void)replacement;
+void* HookRobloxMethod(void* original, void* replacement) {
+    if (!original || !replacement) {
         return nullptr;
+    }
+#if defined(USE_DOBBY) && USE_DOBBY
+    return DobbyWrapper::Hook(original, replacement);
+#else
+    return nullptr;
 #endif
+}
+
+bool InjectRobloxUI() {
+    if (!g_uiController) {
+        return false;
     }
-    
-    // UI integration
-    bool InjectRobloxUI() {
-        #if 0  /* CI stubs removed - iOS only */
-        // Stub implementation for CI builds
-        std::cout << "CI build - InjectRobloxUI stub called" << std::endl;
+    try {
+        g_uiController->Show();
         return true;
-        #else
-        if (!g_uiController) return false;
-        
-        try {
-            return g_uiController->Show();
-        } catch (const std::exception& ex) {
-            std::cerr << "Exception during UI injection: " << ex.what() << std::endl;
-            return false;
-        }
-        #endif
-    }
-    
-    // AI features
-    void AIFeatures_Enable(bool enable) {
-        #if 0  /* CI stubs removed - iOS only */
-        // Stub implementation for CI builds
-        std::cout << "CI build - AIFeatures_Enable stub called: " << (enable ? "true" : "false") << std::endl;
-        #else
-        // Implementation depends on AIIntegration class
-        if (g_executionEngine) {
-            // Set AI features in execution context
-            auto context = g_executionEngine->GetDefaultContext();
-            // Enable or disable AI in context
-            g_executionEngine->SetDefaultContext(context);
-        }
-        #endif
-    }
-    
-    void AIIntegration_Initialize() {
-        #if 0  /* CI stubs removed - iOS only */
-        // Stub implementation for CI builds
-        std::cout << "CI build - AIIntegration_Initialize stub called" << std::endl;
-        #else
-        // Initialize AI integration
-        #ifdef ENABLE_AI_FEATURES
-            #ifdef __APPLE__
-            // Initialize iOS-specific AI features
-            if (g_executionEngine) {
-                std::cout << "Initializing AI Integration..." << std::endl;
-                // Make appropriate calls to initialize AI subsystem
-            }
-            #endif
-        #endif
-        #endif
-    }
-    
-    const char* GetScriptSuggestions(const char* script) {
-        if (!script) return NULL;
-        
-        static std::string suggestions;
-        
-        #if 0  /* CI stubs removed - iOS only */
-        // Stub implementation for CI builds
-        suggestions = "-- CI build - GetScriptSuggestions stub called";
-        #else
-        #ifdef ENABLE_AI_FEATURES
-        // Implement AI-based script suggestions
-        try {
-            // This would normally use AI to generate suggestions
-            // For now, add some basic placeholder suggestions
-            suggestions = "-- AI Script Suggestions:\n";
-            suggestions += "-- 1. Remember to use pcall() for safer script execution\n";
-            suggestions += "-- 2. Consider using task.wait() instead of wait()\n";
-        } catch (const std::exception& ex) {
-            suggestions = "-- Error generating suggestions: ";
-            suggestions += ex.what();
-        }
-        #else
-        suggestions = "-- AI features are not enabled";
-        #endif
-        #endif
-        
-        return suggestions.c_str();
-    }
-    
-    // LED effects
-    void LEDEffects_Enable(bool enable) {
-        // Simple function that's safe to keep the same in all builds
-        std::cout << "LED effects " << (enable ? "enabled" : "disabled") << std::endl;
+    } catch (const std::exception& ex) {
+        std::cerr << "InjectRobloxUI exception: " << ex.what() << std::endl;
+        return false;
     }
 }
+
+void AIFeatures_Enable(bool enable) {
+    g_aiEnabled = enable;
+}
+
+void AIIntegration_Initialize() {
+#if defined(ENABLE_AI_FEATURES) && ENABLE_AI_FEATURES
+    try {
+        auto* init = iOS::AIFeatures::AISystemInitializer::GetInstance();
+        if (init && !init->IsInitialized()) {
+            init->Initialize();
+        }
+        auto assistant = RobloxExecutor::SystemState::GetScriptAssistant();
+        if (assistant) {
+            assistant->Initialize();
+        }
+    } catch (const std::exception& ex) {
+        std::cerr << "AIIntegration_Initialize exception: " << ex.what() << std::endl;
+    }
+#else
+    std::cerr << "AI features compiled out (ENABLE_AI_FEATURES=0)" << std::endl;
+#endif
+}
+
+const char* GetScriptSuggestions(const char* script) {
+    static std::string suggestions;
+    suggestions.clear();
+
+    if (!script) {
+        suggestions = "-- error: null script";
+        return suggestions.c_str();
+    }
+
+#if defined(ENABLE_AI_FEATURES) && ENABLE_AI_FEATURES
+    if (!g_aiEnabled) {
+        suggestions = "-- AI features disabled";
+        return suggestions.c_str();
+    }
+
+    try {
+        auto assistant = RobloxExecutor::SystemState::GetScriptAssistant();
+        if (assistant) {
+            std::vector<std::string> list = assistant->GetSuggestions(std::string(script));
+            for (size_t i = 0; i < list.size(); ++i) {
+                if (i > 0) suggestions += "\n";
+                suggestions += list[i];
+            }
+            if (!suggestions.empty()) {
+                return suggestions.c_str();
+            }
+            // Online generation via HybridAISystem nested types
+            iOS::AIFeatures::HybridAISystem hybrid;
+            // Endpoint/key come from AIConfig defaults when empty args allowed — use online-only mode
+            hybrid.Initialize("", "", "", iOS::AIFeatures::HybridAISystem::OnlineMode::OnlineOnly);
+            iOS::AIFeatures::HybridAISystem::AIRequest request(
+                std::string("Provide concise Luau script suggestions for:\n") + script,
+                "",
+                "general",
+                false);
+            auto response = hybrid.ProcessRequestSync(request);
+            if (response.m_success) {
+                suggestions = response.m_content.empty() ? response.m_scriptCode : response.m_content;
+            } else {
+                suggestions = std::string("-- AI error: ") + response.m_errorMessage;
+            }
+        } else {
+            suggestions = "-- ScriptAssistant not available";
+        }
+    } catch (const std::exception& ex) {
+        suggestions = std::string("-- exception: ") + ex.what();
+    }
+#else
+    suggestions = "-- AI features not compiled in";
+#endif
+    return suggestions.c_str();
+}
+
+void LEDEffects_Enable(bool enable) {
+    (void)enable;
+    // LED hardware effects are device-specific; no-op until a concrete backend is wired.
+}
+
+} // extern "C"

@@ -1,196 +1,214 @@
 #include "hooks.hpp"
-#include "../dobby_wrapper.cpp"
+#include "dobby_wrapper.h"
+
 #include <iostream>
 
 namespace Hooks {
-    // Initialize static members that were previously in the header
-    std::unordered_map<void*, void*> HookEngine::s_hookedFunctions;
-    std::mutex HookEngine::s_hookMutex;
-    std::map<std::string, std::pair<Class, SEL>> ObjcMethodHook::s_hookedMethods;
-    std::mutex ObjcMethodHook::s_methodMutex;
-    
-    // Initialize the hook engine
-    bool HookEngine::Initialize() {
-        std::cout << "Initializing hook engine..." << std::endl;
-        return true;
-    }
-    
-    // Register hooks
-    bool HookEngine::RegisterHook(void* targetAddr, void* hookAddr, void** originalAddr) {
-        if (!targetAddr || !hookAddr) {
-            return false;
-        }
-        
-        std::lock_guard<std::mutex> lock(s_hookMutex);
-        
-        // Check if already hooked
-        if (s_hookedFunctions.find(targetAddr) != s_hookedFunctions.end()) {
-            return false;
-        }
-        
-        // Use Dobby to hook the function
-        bool success = Implementation::HookFunction(targetAddr, hookAddr, originalAddr);
-        if (success) {
-            s_hookedFunctions[targetAddr] = hookAddr;
-        }
-        
-        return success;
-    }
-    
-    // Unregister hooks
-    bool HookEngine::UnregisterHook(void* targetAddr) {
-        if (!targetAddr) {
-            return false;
-        }
-        
-        std::lock_guard<std::mutex> lock(s_hookMutex);
-        
-        // Check if hooked
-        auto it = s_hookedFunctions.find(targetAddr);
-        if (it == s_hookedFunctions.end()) {
-            return false;
-        }
-        
-        // Use Dobby to unhook the function
-        bool success = Implementation::UnhookFunction(targetAddr);
-        if (success) {
-            s_hookedFunctions.erase(it);
-        }
-        
-        return success;
-    }
-    
-    // Clear all hooks
-    void HookEngine::ClearAllHooks() {
-        std::lock_guard<std::mutex> lock(s_hookMutex);
-        
-        for (auto& pair : s_hookedFunctions) {
-            Implementation::UnhookFunction(pair.first);
-        }
-        
-        s_hookedFunctions.clear();
-    }
-    
-    // Implementation namespace
-    namespace Implementation {
-        // Hook function implementation using Dobby
-        bool HookFunction(void* target, void* replacement, void** original) {
-            if (!target || !replacement) {
-                return false;
-            }
-            
-#ifdef USE_DOBBY
-            // Use Dobby for hooking
-            *original = DobbyWrapper::Hook(target, replacement);
-            return (*original != nullptr);
-#else
-            // No hooking library available
-            return false;
-#endif
-        }
-        
-        // Unhook function implementation
-        bool UnhookFunction(void* target) {
-            if (!target) {
-                return false;
-            }
-            
-#ifdef USE_DOBBY
-            // Use Dobby for unhooking
-            return DobbyWrapper::Unhook(target);
-#else
-            // No hooking library available
-            return false;
-#endif
-        }
-    }
-    
-    // Objective-C Method hooking implementation
-    bool ObjcMethodHook::HookMethod(const std::string& className, const std::string& selectorName,
-                                    void* replacementFn, void** originalFn) {
+
+std::unordered_map<void*, void*> HookEngine::s_hookedFunctions;
+std::mutex HookEngine::s_hookMutex;
+
 #ifdef __APPLE__
-        std::lock_guard<std::mutex> lock(s_methodMutex);
-        
-        // Get the class and selector
-        Class cls = objc_getClass(className.c_str());
-        if (!cls) {
-            return false;
-        }
-        
-        SEL selector = sel_registerName(selectorName.c_str());
-        if (!selector) {
-            return false;
-        }
-        
-        // Get the method
-        Method method = class_getInstanceMethod(cls, selector);
+std::map<std::string, ObjcMethodHook::HookedMethodInfo> ObjcMethodHook::s_hookedMethods;
+std::mutex ObjcMethodHook::s_methodMutex;
+#endif
+
+bool HookEngine::Initialize() {
+    return true;
+}
+
+bool HookEngine::RegisterHook(void* targetAddr, void* hookAddr, void** originalAddr) {
+    if (!targetAddr || !hookAddr) {
+        return false;
+    }
+
+    std::lock_guard<std::mutex> lock(s_hookMutex);
+    if (s_hookedFunctions.find(targetAddr) != s_hookedFunctions.end()) {
+        return false;
+    }
+
+    void* original = nullptr;
+    if (!Implementation::HookFunction(targetAddr, hookAddr, &original)) {
+        return false;
+    }
+
+    if (originalAddr) {
+        *originalAddr = original;
+    }
+    s_hookedFunctions[targetAddr] = original; // store original for restore
+    return true;
+}
+
+bool HookEngine::UnregisterHook(void* targetAddr) {
+    if (!targetAddr) {
+        return false;
+    }
+
+    std::lock_guard<std::mutex> lock(s_hookMutex);
+    auto it = s_hookedFunctions.find(targetAddr);
+    if (it == s_hookedFunctions.end()) {
+        return false;
+    }
+
+    if (!Implementation::UnhookFunction(targetAddr)) {
+        return false;
+    }
+
+    s_hookedFunctions.erase(it);
+    return true;
+}
+
+void HookEngine::ClearAllHooks() {
+    std::lock_guard<std::mutex> lock(s_hookMutex);
+    for (auto& pair : s_hookedFunctions) {
+        Implementation::UnhookFunction(pair.first);
+    }
+    s_hookedFunctions.clear();
+}
+
+namespace Implementation {
+
+bool HookFunction(void* target, void* replacement, void** original) {
+    if (!target || !replacement) {
+        return false;
+    }
+#if defined(USE_DOBBY) && USE_DOBBY
+    void* orig = DobbyWrapper::Hook(target, replacement);
+    if (!orig) {
+        return false;
+    }
+    if (original) {
+        *original = orig;
+    }
+    return true;
+#else
+    (void)target;
+    (void)replacement;
+    (void)original;
+    return false;
+#endif
+}
+
+bool UnhookFunction(void* target) {
+    if (!target) {
+        return false;
+    }
+#if defined(USE_DOBBY) && USE_DOBBY
+    return DobbyWrapper::Unhook(target);
+#else
+    (void)target;
+    return false;
+#endif
+}
+
+} // namespace Implementation
+
+#ifdef __APPLE__
+
+bool ObjcMethodHook::HookMethod(const std::string& className,
+                                const std::string& selectorName,
+                                void* replacementFn,
+                                void** originalFn) {
+    if (className.empty() || selectorName.empty() || !replacementFn) {
+        return false;
+    }
+
+    std::lock_guard<std::mutex> lock(s_methodMutex);
+
+    Class cls = objc_getClass(className.c_str());
+    if (!cls) {
+        return false;
+    }
+
+    SEL selector = sel_registerName(selectorName.c_str());
+    if (!selector) {
+        return false;
+    }
+
+    Method method = class_getInstanceMethod(cls, selector);
+    if (!method) {
+        // Try class method
+        method = class_getClassMethod(cls, selector);
         if (!method) {
             return false;
         }
-        
-        // Store the original method implementation
-        IMP originalIMP = method_getImplementation(method);
+    }
+
+    const std::string key = className + "::" + selectorName;
+    if (s_hookedMethods.find(key) != s_hookedMethods.end()) {
+        // Already hooked — still return original if requested
         if (originalFn) {
-            *originalFn = (void*)originalIMP;
+            *originalFn = s_hookedMethods[key].originalIMP;
         }
-        
-        // Replace the method implementation
-        method_setImplementation(method, (IMP)replacementFn);
-        
-        // Store the hooked method for later
-        std::string key = className + "::" + selectorName;
-        s_hookedMethods[key] = std::make_pair(cls, selector);
-        
         return true;
-#else
-        // Not supported on non-Apple platforms
-        return false;
-#endif
     }
-    
-    bool ObjcMethodHook::UnhookMethod(const std::string& className, const std::string& selectorName) {
-#ifdef __APPLE__
-        std::lock_guard<std::mutex> lock(s_methodMutex);
-        
-        // Check if the method is hooked
-        std::string key = className + "::" + selectorName;
-        auto it = s_hookedMethods.find(key);
-        if (it == s_hookedMethods.end()) {
-            return false;
-        }
-        
-        // Get the class and selector
-        Class cls = it->second.first;
-        SEL selector = it->second.second;
-        
-        // Get the method
+
+    IMP originalIMP = method_getImplementation(method);
+    if (!originalIMP) {
+        return false;
+    }
+
+    method_setImplementation(method, reinterpret_cast<IMP>(replacementFn));
+
+    HookedMethodInfo info;
+    info.cls = cls;
+    info.selector = selector;
+    info.originalIMP = reinterpret_cast<HookIMP>(originalIMP);
+    s_hookedMethods[key] = info;
+
+    if (originalFn) {
+        *originalFn = reinterpret_cast<void*>(originalIMP);
+    }
+    return true;
+}
+
+bool ObjcMethodHook::UnhookMethod(const std::string& className,
+                                  const std::string& selectorName) {
+    std::lock_guard<std::mutex> lock(s_methodMutex);
+
+    const std::string key = className + "::" + selectorName;
+    auto it = s_hookedMethods.find(key);
+    if (it == s_hookedMethods.end()) {
+        return false;
+    }
+
+    Class cls = it->second.cls;
+    SEL selector = it->second.selector;
+    IMP originalIMP = reinterpret_cast<IMP>(it->second.originalIMP);
+
+    Method method = class_getInstanceMethod(cls, selector);
+    if (!method) {
+        method = class_getClassMethod(cls, selector);
+    }
+    if (!method) {
+        s_hookedMethods.erase(it);
+        return false;
+    }
+
+    method_setImplementation(method, originalIMP);
+    s_hookedMethods.erase(it);
+    return true;
+}
+
+void ObjcMethodHook::ClearAllHooks() {
+    std::lock_guard<std::mutex> lock(s_methodMutex);
+
+    for (auto it = s_hookedMethods.begin(); it != s_hookedMethods.end(); ) {
+        Class cls = it->second.cls;
+        SEL selector = it->second.selector;
+        IMP originalIMP = reinterpret_cast<IMP>(it->second.originalIMP);
+
         Method method = class_getInstanceMethod(cls, selector);
         if (!method) {
-            return false;
+            method = class_getClassMethod(cls, selector);
         }
-        
-        // We don't have the original implementation, so we can't restore it
-        // This is a limitation - a better implementation would store the original implementation
-        
-        // Remove from the tracked methods
-        s_hookedMethods.erase(it);
-        
-        return true;
-#else
-        // Not supported on non-Apple platforms
-        return false;
-#endif
-    }
-    
-    void ObjcMethodHook::ClearAllHooks() {
-#ifdef __APPLE__
-        std::lock_guard<std::mutex> lock(s_methodMutex);
-        
-        // We don't have the original implementations, so we can't restore them
-        // This is a limitation - a better implementation would store the original implementations
-        
-        // Clear the tracked methods
-        s_hookedMethods.clear();
-#endif
+        if (method) {
+            method_setImplementation(method, originalIMP);
+        }
+        it = s_hookedMethods.erase(it);
     }
 }
+
+#endif // __APPLE__
+
+} // namespace Hooks

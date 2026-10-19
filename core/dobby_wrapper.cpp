@@ -1,94 +1,99 @@
-// Fixed dobby_wrapper.cpp implementation without DobbyUnHook
+#include "dobby_wrapper.h"
+
 #include <cstdint>
 #include <unordered_map>
 #include <mutex>
 #include <vector>
 
 #ifdef __APPLE__
-  // On iOS, we would include the actual Dobby header
-  // #include "../external/dobby/include/dobby.h"
-  // For compilation purposes, we'll define the function we need
-  extern "C" {
+extern "C" {
+    // Dobby public API (linked from static lib on CI)
     int DobbyHook(void* address, void* replacement, void** original);
-  }
+    int DobbyDestroy(void* address);
+}
 #else
-  // Stub for non-iOS platforms
-  #define DobbyHook(a, b, c) (-1)
+static inline int DobbyHook(void*, void*, void**) { return -1; }
+static inline int DobbyDestroy(void*) { return -1; }
 #endif
 
 namespace DobbyWrapper {
-    // Thread-safe storage for original function pointers
-    static std::unordered_map<void*, void*> originalFunctions;
-    static std::mutex hookMutex;
-    static std::vector<std::pair<void*, void*>> hookHistory;
+namespace {
+    struct HookRecord {
+        void* original = nullptr;
+        void* replacement = nullptr;
+    };
+    std::unordered_map<void*, HookRecord> g_hooks;
+    std::mutex g_mutex;
+}
 
-    // Hook a function using Dobby
-    void* Hook(void* targetAddr, void* replacementAddr) {
-        if (!targetAddr || !replacementAddr) return nullptr;
-        
-        void* originalFunc = nullptr;
-        
-        {
-            std::lock_guard<std::mutex> lock(hookMutex);
-            int result = DobbyHook(targetAddr, replacementAddr, &originalFunc);
-            
-            if (result == 0 && originalFunc) {
-                originalFunctions[targetAddr] = originalFunc;
-                hookHistory.push_back({targetAddr, replacementAddr});
-            } else {
-                // Log error or handle the failure
-                return nullptr;
-            }
-        }
-        
-        return originalFunc;
-    }
-
-    // Get the original function pointer for a hooked function
-    void* GetOriginalFunction(void* targetAddr) {
-        std::lock_guard<std::mutex> lock(hookMutex);
-        auto it = originalFunctions.find(targetAddr);
-        if (it != originalFunctions.end()) {
-            return it->second;
-        }
+void* Hook(void* targetAddr, void* replacementAddr) {
+    if (!targetAddr || !replacementAddr) {
         return nullptr;
     }
 
-    // Unhook a previously hooked function - Alternative implementation without DobbyUnHook
-    bool Unhook(void* targetAddr) {
-        if (!targetAddr) return false;
-        
-        {
-            std::lock_guard<std::mutex> lock(hookMutex);
-            // Alternative implementation - re-hook to original function
-            auto it = originalFunctions.find(targetAddr);
-            if (it != originalFunctions.end()) {
-                void* originalFunc = it->second;
-                // Re-hook to restore original function
-                void* dummy = nullptr;
-                DobbyHook(targetAddr, originalFunc, &dummy);
-                originalFunctions.erase(targetAddr);
-                return true;
-            }
-        }
-        
+    std::lock_guard<std::mutex> lock(g_mutex);
+
+    auto existing = g_hooks.find(targetAddr);
+    if (existing != g_hooks.end()) {
+        // Already hooked — return stored original
+        return existing->second.original;
+    }
+
+    void* originalFunc = nullptr;
+    const int result = DobbyHook(targetAddr, replacementAddr, &originalFunc);
+    if (result != 0 || originalFunc == nullptr) {
+        return nullptr;
+    }
+
+    g_hooks[targetAddr] = HookRecord{originalFunc, replacementAddr};
+    return originalFunc;
+}
+
+bool Unhook(void* targetAddr) {
+    if (!targetAddr) {
         return false;
     }
 
-    // Unhook all previously hooked functions
-    void UnhookAll() {
-        std::lock_guard<std::mutex> lock(hookMutex);
-        
-        for (auto& pair : hookHistory) {
-            // Alternative implementation - re-hook to original function
-            auto it = originalFunctions.find(pair.first);
-            if (it != originalFunctions.end()) {
-                void* dummy = nullptr;
-                DobbyHook(pair.first, it->second, &dummy);
-            }
+    std::lock_guard<std::mutex> lock(g_mutex);
+    auto it = g_hooks.find(targetAddr);
+    if (it == g_hooks.end()) {
+        return false;
+    }
+
+    // Prefer DobbyDestroy (official restore). If it fails, re-hook original as fallback.
+    int rc = DobbyDestroy(targetAddr);
+    if (rc != 0) {
+        void* dummy = nullptr;
+        rc = DobbyHook(targetAddr, it->second.original, &dummy);
+        if (rc != 0) {
+            return false;
         }
-        
-        originalFunctions.clear();
-        hookHistory.clear();
+    }
+
+    g_hooks.erase(it);
+    return true;
+}
+
+void UnhookAll() {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    for (auto it = g_hooks.begin(); it != g_hooks.end(); ) {
+        void* target = it->first;
+        void* original = it->second.original;
+        int rc = DobbyDestroy(target);
+        if (rc != 0) {
+            void* dummy = nullptr;
+            DobbyHook(target, original, &dummy);
+        }
+        it = g_hooks.erase(it);
     }
 }
+
+void* GetOriginalFunction(void* targetAddr) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    auto it = g_hooks.find(targetAddr);
+    if (it == g_hooks.end()) {
+        return nullptr;
+    }
+    return it->second.original;
+}
+} // namespace DobbyWrapper
