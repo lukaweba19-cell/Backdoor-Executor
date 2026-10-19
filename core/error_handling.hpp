@@ -385,8 +385,8 @@ private:
 };
 
 // Initialize static members
-ErrorManager* ErrorManager::s_instance = nullptr;
-std::mutex ErrorManager::s_mutex;
+inline ErrorManager* ErrorManager::s_instance = nullptr;
+inline std::mutex ErrorManager::s_mutex;
 
 // Utility functions for error handling
 inline void ThrowError(const ErrorCode& error, const std::string& details = "") {

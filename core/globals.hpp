@@ -309,12 +309,12 @@ public:
 };
 
 // Initialize static members
-std::mutex AddressCache::cacheMutex;
-std::string AddressCache::currentRobloxVersion = "";
-std::unordered_map<std::string, uintptr_t> AddressCache::addressCache;
-std::unordered_map<std::string, std::string> AddressCache::signatureMap;
-std::atomic<bool> AddressCache::isCacheInitialized(false);
-std::atomic<bool> AddressCache::isVersionCheckInProgress(false);
+inline std::mutex AddressCache::cacheMutex;
+inline std::string AddressCache::currentRobloxVersion = "";
+inline std::unordered_map<std::string, uintptr_t> AddressCache::addressCache;
+inline std::unordered_map<std::string, std::string> AddressCache::signatureMap;
+inline std::atomic<bool> AddressCache::isCacheInitialized(false);
+inline std::atomic<bool> AddressCache::isVersionCheckInProgress(false);
 
 // Function to get addresses - replace direct access with this
 inline uintptr_t GetFunctionAddress(const std::string& name) {

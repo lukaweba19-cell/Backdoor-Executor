@@ -70,15 +70,5 @@ extern "C" {
     }
     
     // Lua module entry point
-    int luaopen_mylibrary(void* L) {
-        // Cast to void to remove the unused parameter warning
-        (void)(L);
-        
-        std::cout << "Lua module loaded: mylibrary" << std::endl;
-        
-        // This will be called when the Lua state loads our library
-        // Perform any Lua-specific initialization here
-        
-        return 1; // Return 1 to indicate success
-    }
+    /* luaopen_mylibrary defined in library.cpp */
 }

@@ -85,6 +85,7 @@ VM_SRC_DIR := vm/src
 VM_SOURCES := $(shell find $(VM_SRC_DIR) -name "*.cpp" 2>/dev/null)
 
 CORE_SOURCES := $(shell find core -maxdepth 1 -name "*.cpp" 2>/dev/null)
+CORE_SOURCES := $(filter-out core/main.cpp,$(CORE_SOURCES))
 HOOKS_SOURCES := $(shell find hooks -name "*.cpp" 2>/dev/null)
 UTILS_SOURCES := $(shell find utils -name "*.cpp" 2>/dev/null)
 SECURITY_SOURCES := $(shell find security -name "*.cpp" 2>/dev/null)
@@ -92,6 +93,7 @@ MEMORY_SOURCES := $(shell find memory -name "*.cpp" 2>/dev/null)
 EXEC_SOURCES := $(shell find exec -name "*.cpp" 2>/dev/null)
 
 iOS_CPP_SOURCES := $(shell find ios -name "*.cpp" 2>/dev/null)
+iOS_CPP_SOURCES := $(filter-out %Statics.cpp,$(iOS_CPP_SOURCES))
 iOS_MM_SOURCES := $(shell find ios -name "*.mm" 2>/dev/null)
 
 ifeq ($(ENABLE_ADVANCED_BYPASS),0)
@@ -136,9 +138,7 @@ install: all
 $(OUTPUT_DIR)/$(LIB_NAME): $(OBJECTS)
 	@echo "Linking $(LIB_NAME)..."
 	@mkdir -p $(BUILD_DIR)
-	@echo 'extern "C" int main(int argc, char** argv) { (void)argc; (void)argv; return 0; }' > $(BUILD_DIR)/main.cpp
-	$(CXX) $(CXXFLAGS) $(PLATFORM_FLAGS) $(DEFS) $(INCLUDES) -c -o $(BUILD_DIR)/main.o $(BUILD_DIR)/main.cpp
-	$(LD) $(LDFLAGS) -o $@ $(BUILD_DIR)/main.o $^ -install_name $(DYLIB_INSTALL_NAME)
+	$(LD) $(LDFLAGS) -o $@ $^ -install_name $(DYLIB_INSTALL_NAME)
 	@echo "✅ Built $@"
 
 %.o: %.cpp

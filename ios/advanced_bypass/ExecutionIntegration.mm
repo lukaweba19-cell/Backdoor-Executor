@@ -389,10 +389,8 @@ namespace iOS {
         }
 
         // Helper function to integrate HTTP functions
-        bool IntegrateHttpFunctions(std::shared_ptr<ExecutionIntegration> engine) {
-            if (!engine) {
-                return false;
-            }
+    // IntegrateHttpFunctions defined in HttpIntegration.mm
+
             
             // Set up HTTP functions wrapper script
             const std::string httpFunctionsScript = R"(

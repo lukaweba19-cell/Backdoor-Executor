@@ -425,7 +425,7 @@ namespace AntiDetection {
     };
     
     // Initialize static members
-    std::atomic<bool> AntiDebug::s_timingCheckActive(false);
-    std::mutex AntiDebug::s_timingMutex;
-    std::chrono::high_resolution_clock::time_point AntiDebug::s_lastCheckTime;
+    inline std::atomic<bool> AntiDebug::s_timingCheckActive(false);
+    inline std::mutex AntiDebug::s_timingMutex;
+    inline std::chrono::high_resolution_clock::time_point AntiDebug::s_lastCheckTime;
 }
