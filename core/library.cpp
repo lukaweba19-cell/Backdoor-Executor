@@ -20,9 +20,9 @@
 #include "MemoryAccess.h"
 
 #if defined(ENABLE_AI_FEATURES) && ENABLE_AI_FEATURES
-#include "HybridAISystem.h"
-#include "ScriptAssistant.h"
-#include "AISystemInitializer.h"
+#include "ai_features/HybridAISystem.h"
+#include "ai_features/ScriptAssistant.h"
+#include "ai_features/AISystemInitializer.h"
 
 
 #endif

@@ -39,7 +39,7 @@ LDFLAGS := -shared -undefined dynamic_lookup \
 # Include paths (updated for modular layout)
 INCLUDES := -I. -Ivm/include -Ivm/src -Ivm/src/Luau \
 	-Icore -Ihooks -Iutils -Isecurity -Imemory -Iexec -Iios \
-	-Iios/advanced_bypass -Iios/ui -Isecurity/anti_detection
+	-Iios/advanced_bypass -Iios/ui -Iios/ai_features -Iios/ai_features/vulnerability_detection -Isecurity/anti_detection
 
 # iOS SDK flags
 PLATFORM_FLAGS := -isysroot $(SDK) -arch $(ARCHS) -mios-version-min=$(MIN_IOS_VERSION) \
