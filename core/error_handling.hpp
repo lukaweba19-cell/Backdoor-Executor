@@ -442,7 +442,7 @@ inline void ReportError(const ErrorCode& error, const std::string& details = "")
 // Integrity check functions for anti-tamper protection
 namespace IntegrityCheck {
     // Simple function to check memory integrity of a region
-    bool CheckMemoryRegion(void* address, size_t size, uint32_t expectedChecksum) {
+    inline bool CheckMemoryRegion(void* address, size_t size, uint32_t expectedChecksum) {
         if (!address || size == 0) return false;
         
         // Simple checksum calculation
@@ -457,7 +457,7 @@ namespace IntegrityCheck {
     }
     
     // Function to check file integrity
-    bool CheckFileIntegrity(const std::string& filePath, uint32_t expectedChecksum) {
+    inline bool CheckFileIntegrity(const std::string& filePath, uint32_t expectedChecksum) {
         if (!FileUtils::Exists(filePath)) return false;
         
         std::string content = FileUtils::ReadFile(filePath);

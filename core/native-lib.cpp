@@ -40,35 +40,7 @@ namespace RobloxExecutor {
     }
 }
 
-// C interface
+// C interface: dylib_initializer / dylib_finalizer / luaopen_mylibrary live in library.cpp
 extern "C" {
-    // Initialization function that runs when library is loaded
-    __attribute__((constructor))
-    void dylib_initializer() {
-        std::cout << "Roblox Executor dylib initializing" << std::endl;
-        
-        #ifdef __APPLE__
-        // Initialize the hook engine
-        Hooks::HookEngine::Initialize();
-        
-        // Initialize memory system
-        Memory::Initialize();
-        
-        // iOS-specific initialization
-        std::cout << "Initializing iOS integration" << std::endl;
-        #endif
-    }
-    
-    __attribute__((destructor))
-    void dylib_finalizer() {
-        std::cout << "Roblox Executor dylib shutting down" << std::endl;
-        
-        #ifdef __APPLE__
-        // Clean up hooks
-        Hooks::HookEngine::ClearAllHooks();
-        #endif
-    }
-    
-    // Lua module entry point
-    /* luaopen_mylibrary defined in library.cpp */
 }
+
