@@ -42,30 +42,38 @@ jobs:
       run: |
         set -e
         SDK=$(xcrun --sdk iphoneos --show-sdk-path)
-        rm -rf external/dobby
+        export SDKROOT="$SDK"
+        rm -rf external/dobby Dobby
         mkdir -p external/dobby/{include,lib}
-        # Always rebuild for iPhoneOS — cached macOS objects must not be linked
-        rm -rf Dobby
         git clone --depth=1 https://github.com/jmpews/Dobby.git
         cmake -S Dobby -B Dobby/build-ios \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_SYSTEM_NAME=iOS \
+          -DCMAKE_SYSTEM_PROCESSOR=arm64 \
           -DCMAKE_OSX_SYSROOT="$SDK" \
           -DCMAKE_OSX_ARCHITECTURES=arm64 \
           -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
+          -DCMAKE_C_COMPILER="$(xcrun -f clang)" \
+          -DCMAKE_CXX_COMPILER="$(xcrun -f clang++)" \
+          -DCMAKE_C_FLAGS="-isysroot ${SDK} -arch arm64 -miphoneos-version-min=15.0" \
+          -DCMAKE_CXX_FLAGS="-isysroot ${SDK} -arch arm64 -miphoneos-version-min=15.0" \
           -DDOBBY_BUILD_SHARED_LIBRARY=OFF \
-          -DDOBBY_BUILD_STATIC_LIBRARY=ON \
           -DDOBBY_GENERATE_SHARED=OFF
         cmake --build Dobby/build-ios --config Release -j"$(sysctl -n hw.ncpu)"
-        # Locate libdobby.a
         LIB=$(find Dobby/build-ios -name 'libdobby.a' | head -1)
-        test -n "$LIB"
+        test -n "$LIB" && test -f "$LIB"
         cp "$LIB" external/dobby/lib/libdobby.a
         cp -R Dobby/include/. external/dobby/include/
-        # Confirm Mach-O platform
         file external/dobby/lib/libdobby.a
         lipo -info external/dobby/lib/libdobby.a || true
+        # Fail if still macOS platform object
+        if otool -lv external/dobby/lib/libdobby.a 2>/dev/null | grep -q 'platform macOS'; then
+          echo "ERROR: Dobby still built for macOS"
+          exit 1
+        fi
         ls -la external/dobby/lib/
+
+
 
     - name: Configure environment
       run: |
