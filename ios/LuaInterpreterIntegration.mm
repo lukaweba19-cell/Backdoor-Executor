@@ -20,9 +20,13 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
-// Luau requires debugname on lua_pushcfunction; provide 2-arg compatibility for this file's lambdas
+
+// Luau lua_pushcfunction requires (L, fn, debugname). Support 2-arg and 3-arg call sites.
 #undef lua_pushcfunction
-#define lua_pushcfunction(L, fn) lua_pushcclosurek((L), (fn), "cfunction", 0, NULL)
+#define LUA_PUSHCFN_3(L, fn, name) lua_pushcclosurek((L), (fn), (name), 0, NULL)
+#define LUA_PUSHCFN_2(L, fn)       lua_pushcclosurek((L), (fn), "cfunction", 0, NULL)
+#define LUA_PUSHCFN_SELECTOR(_1,_2,_3,NAME,...) NAME
+#define lua_pushcfunction(...) LUA_PUSHCFN_SELECTOR(__VA_ARGS__, LUA_PUSHCFN_3, LUA_PUSHCFN_2)(__VA_ARGS__)
 
 
 namespace iOS {
