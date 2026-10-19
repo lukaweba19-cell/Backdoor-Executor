@@ -93,7 +93,6 @@ MEMORY_SOURCES := $(shell find memory -name "*.cpp" 2>/dev/null)
 EXEC_SOURCES := $(shell find exec -name "*.cpp" 2>/dev/null)
 
 iOS_CPP_SOURCES := $(shell find ios -name "*.cpp" 2>/dev/null)
-iOS_CPP_SOURCES := $(filter-out %Statics.cpp,$(iOS_CPP_SOURCES))
 iOS_MM_SOURCES := $(shell find ios -name "*.mm" 2>/dev/null)
 
 ifeq ($(ENABLE_ADVANCED_BYPASS),0)
