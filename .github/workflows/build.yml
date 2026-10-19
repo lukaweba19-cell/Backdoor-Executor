@@ -28,7 +28,7 @@ jobs:
       with:
         path: |
           ~/Library/Caches/Homebrew
-          Dobby/build
+          Dobby/build-ios
         key: ${{ runner.os }}-deps-${{ hashFiles('Makefile') }}
         restore-keys: |
           ${{ runner.os }}-deps-
@@ -38,23 +38,34 @@ jobs:
         brew install cmake pkg-config || true
         mkdir -p output build external/dobby/{include,lib}
 
-    - name: Build Dobby (static)
+    - name: Build Dobby (static, iOS arm64)
       run: |
-        if [ ! -f external/dobby/lib/libdobby.a ]; then
-          git clone --depth=1 https://github.com/jmpews/Dobby.git
-          cd Dobby
-          mkdir -p build && cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release \
-                   -DDOBBY_BUILD_SHARED_LIBRARY=OFF \
-                   -DDOBBY_BUILD_STATIC_LIBRARY=ON \
-                   -DCMAKE_OSX_ARCHITECTURES=arm64
-          cmake --build . --config Release -j$(sysctl -n hw.ncpu)
-          mkdir -p ../../external/dobby/lib ../../external/dobby/include
-          cp libdobby.a ../../external/dobby/lib/ || cp src/libdobby.a ../../external/dobby/lib/
-          cp -r ../include/* ../../external/dobby/include/ || true
-          cd ../..
-        fi
-        ls -la external/dobby/lib/ || true
+        set -e
+        SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+        rm -rf external/dobby
+        mkdir -p external/dobby/{include,lib}
+        # Always rebuild for iPhoneOS — cached macOS objects must not be linked
+        rm -rf Dobby
+        git clone --depth=1 https://github.com/jmpews/Dobby.git
+        cmake -S Dobby -B Dobby/build-ios \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_SYSTEM_NAME=iOS \
+          -DCMAKE_OSX_SYSROOT="$SDK" \
+          -DCMAKE_OSX_ARCHITECTURES=arm64 \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
+          -DDOBBY_BUILD_SHARED_LIBRARY=OFF \
+          -DDOBBY_BUILD_STATIC_LIBRARY=ON \
+          -DDOBBY_GENERATE_SHARED=OFF
+        cmake --build Dobby/build-ios --config Release -j"$(sysctl -n hw.ncpu)"
+        # Locate libdobby.a
+        LIB=$(find Dobby/build-ios -name 'libdobby.a' | head -1)
+        test -n "$LIB"
+        cp "$LIB" external/dobby/lib/libdobby.a
+        cp -R Dobby/include/. external/dobby/include/
+        # Confirm Mach-O platform
+        file external/dobby/lib/libdobby.a
+        lipo -info external/dobby/lib/libdobby.a || true
+        ls -la external/dobby/lib/
 
     - name: Configure environment
       run: |
