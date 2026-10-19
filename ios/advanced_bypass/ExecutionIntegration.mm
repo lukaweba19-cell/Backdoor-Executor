@@ -388,55 +388,6 @@ namespace iOS {
             return m_loadstring->InjectSupport(script);
         }
 
-        // Helper function to integrate HTTP functions
-    // IntegrateHttpFunctions defined in HttpIntegration.mm
-
-            
-            // Set up HTTP functions wrapper script
-            const std::string httpFunctionsScript = R"(
-                -- HTTP functions wrapper
-                local http = {}
-                
-                -- HTTP GET request
-                function http.get(url, headers)
-                    headers = headers or {}
-                    -- Implementation goes here
-                    return {
-                        Success = true,
-                        StatusCode = 200,
-                        StatusMessage = "OK",
-                        Headers = {},
-                        Body = "HTTP GET simulation"
-                    }
-                end
-                
-                -- HTTP POST request
-                function http.post(url, body, headers, contentType)
-                    headers = headers or {}
-                    contentType = contentType or "application/json"
-                    -- Implementation goes here
-                    return {
-                        Success = true,
-                        StatusCode = 200,
-                        StatusMessage = "OK",
-                        Headers = {},
-                        Body = "HTTP POST simulation"
-                    }
-                end
-                
-                -- Make HTTP functions available globally
-                _G.http = http
-                
-                return "HTTP functions integrated"
-            )";
-            
-            // Execute the script to set up HTTP functions
-            auto result = engine->Execute(httpFunctionsScript);
-            
-            std::cout << "HTTP Functions Integration: " 
-                      << (result.m_success ? "Successful" : "Failed") << std::endl;
-            
-            return result.m_success;
-        }
-    }
-}
+        // IntegrateHttpFunctions is implemented in HttpIntegration.mm
+} // namespace AdvancedBypass
+} // namespace iOS
