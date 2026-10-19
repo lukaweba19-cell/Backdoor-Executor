@@ -277,11 +277,6 @@ void SystemState::Shutdown() {
         s_scriptAssistant.reset();
         s_signatureAdaptation.reset();
         s_aiManager.reset();
-        
-        if (s_aiIntegration) {
-            // Cleanup would go here
-            s_aiIntegration = nullptr;
-        }
 #else
         // No iOS-specific cleanup needed on non-iOS platforms
         Logging::LogInfo("System", "Skipping iOS-specific cleanup on non-iOS platform");

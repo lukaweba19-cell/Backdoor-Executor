@@ -69,7 +69,6 @@ public:
         Auto,            // Automatically choose based on connectivity
         PreferOnline,    // Prefer online mode
         OnlineOnly       // Only use online mode
-        OnlineOnly       // Only use online mode
     };
 
     /**
