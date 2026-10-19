@@ -97,6 +97,11 @@ public:
     void SetOnlineMode(OnlineMode mode) { m_onlineMode = mode; }
     void SetModel(const std::string& model) { m_model = model; }
 
+    void HandleNetworkStatusChange(bool isOnline);
+    void HandleMemoryWarning();
+    uint64_t GetMemoryUsage() const;
+
+
     std::string GetAPIEndpoint() const { return m_apiEndpoint; }
     std::string GetModel() const { return m_model; }
     bool IsNetworkConnected() const { return m_networkConnected; }

@@ -331,5 +331,20 @@ void HybridAISystem::ProcessQuery(const std::string& query,
     ProcessRequest(req, callback);
 }
 
+
+void HybridAISystem::HandleNetworkStatusChange(bool isOnline) {
+    if (!isOnline) {
+        m_onlineMode = OnlineMode::OnlineOnly;
+    }
+}
+
+void HybridAISystem::HandleMemoryWarning() {
+    // Online-only: no local model buffers to release
+}
+
+uint64_t HybridAISystem::GetMemoryUsage() const {
+    return static_cast<uint64_t>(m_apiEndpoint.size() + m_apiKey.size() + m_model.size() + 256);
+}
+
 } // namespace AIFeatures
 } // namespace iOS

@@ -227,11 +227,9 @@ HybridAISystem::OnlineMode AIIntegrationManager::GetOptimalOnlineMode() const {
         switch (configMode) {
             case AIConfig::OnlineMode::PreferOnline:
                 return HybridAISystem::OnlineMode::PreferOnline;
-            case AIConfig::OnlineMode::PreferOnline:
                 return HybridAISystem::OnlineMode::PreferOnline;
             case AIConfig::OnlineMode::OnlineOnly:
                 return HybridAISystem::OnlineMode::OnlineOnly;
-            case AIConfig::OnlineMode::OnlineOnly:
                 return HybridAISystem::OnlineMode::OnlineOnly;
             default:
                 break;
@@ -299,8 +297,16 @@ void AIIntegrationManager::GenerateScript(const std::string& description,
         return;
     }
     
-    // Use hybrid AI for script generation
-    m_hybridAI->GenerateScript(description, context, callback, useOnline && m_online);
+    // Adapt string callback to HybridAI ResponseCallback
+    auto adapted = [callback](const HybridAISystem::AIResponse& resp) {
+        if (!callback) return;
+        if (resp.m_success) {
+            callback(resp.m_scriptCode.empty() ? resp.m_content : resp.m_scriptCode);
+        } else {
+            callback(std::string("Error: ") + resp.m_errorMessage);
+        }
+    };
+    m_hybridAI->GenerateScript(description, context, adapted, useOnline && m_online);
 }
 
 // Debug a script
@@ -324,7 +330,12 @@ void AIIntegrationManager::DebugScript(const std::string& script,
     }
     
     // Use hybrid AI for script debugging
-    m_hybridAI->DebugScript(script, callback, useOnline && m_online);
+    auto adapted = [callback](const HybridAISystem::AIResponse& resp) {
+        if (!callback) return;
+        if (resp.m_success) callback(resp.m_content);
+        else callback(std::string("Error: ") + resp.m_errorMessage);
+    };
+    m_hybridAI->DebugScript(script, adapted, useOnline && m_online);
 }
 
 // Process a general query
@@ -340,7 +351,12 @@ void AIIntegrationManager::ProcessQuery(const std::string& query,
     }
     
     // Use hybrid AI for query processing
-    m_hybridAI->ProcessQuery(query, callback, useOnline && m_online);
+    auto adapted = [callback](const HybridAISystem::AIResponse& resp) {
+        if (!callback) return;
+        if (resp.m_success) callback(resp.m_content);
+        else callback(std::string("Error: ") + resp.m_errorMessage);
+    };
+    m_hybridAI->ProcessQuery(query, adapted, useOnline && m_online);
 }
 
 // Report detection event to signature adaptation
@@ -416,13 +432,11 @@ void AIIntegrationManager::SetOnlineMode(::iOS::AIFeatures::HybridAISystem::Onli
         case HybridAISystem::OnlineMode::PreferOnline:
             configMode = AIConfig::OnlineMode::PreferOnline;
             break;
-        case HybridAISystem::OnlineMode::PreferOnline:
             configMode = AIConfig::OnlineMode::PreferOnline;
             break;
         case HybridAISystem::OnlineMode::OnlineOnly:
             configMode = AIConfig::OnlineMode::OnlineOnly;
             break;
-        case HybridAISystem::OnlineMode::OnlineOnly:
             configMode = AIConfig::OnlineMode::OnlineOnly;
             break;
         default:
@@ -448,11 +462,9 @@ void AIIntegrationManager::SetOnlineMode(::iOS::AIFeatures::HybridAISystem::Onli
             return HybridAISystem::OnlineMode::Auto;
         case AIConfig::OnlineMode::PreferOnline:
             return HybridAISystem::OnlineMode::PreferOnline;
-        case AIConfig::OnlineMode::PreferOnline:
             return HybridAISystem::OnlineMode::PreferOnline;
         case AIConfig::OnlineMode::OnlineOnly:
             return HybridAISystem::OnlineMode::OnlineOnly;
-        case AIConfig::OnlineMode::OnlineOnly:
             return HybridAISystem::OnlineMode::OnlineOnly;
         default:
             return HybridAISystem::OnlineMode::Auto;
@@ -711,11 +723,9 @@ int AI_GetOnlineMode() {
             return 0;
         case iOS::AIFeatures::HybridAISystem::OnlineMode::PreferOnline:
             return 1;
-        case iOS::AIFeatures::HybridAISystem::OnlineMode::PreferOnline:
             return 2;
         case iOS::AIFeatures::HybridAISystem::OnlineMode::OnlineOnly:
             return 3;
-        case iOS::AIFeatures::HybridAISystem::OnlineMode::OnlineOnly:
             return 4;
         default:
             return 0;

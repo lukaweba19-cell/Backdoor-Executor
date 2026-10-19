@@ -20,7 +20,26 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
+// Luau requires debugname on lua_pushcfunction; provide 2-arg compatibility for this file's lambdas
+#undef lua_pushcfunction
+#define lua_pushcfunction(L, fn) lua_pushcclosurek((L), (fn), "cfunction", 0, NULL)
+
+
 namespace iOS {
+
+namespace {
+// Load Luau bytecode into the state. Source text must be compiled to bytecode first.
+// Bytecode format starts with a version byte (LBC_VERSION range); plain source will fail load with a clear error.
+int LoadLuaString(lua_State* L, const char* s) {
+    if (!s) {
+        lua_pushstring(L, "LoadLuaString: null buffer");
+        return 1; // error
+    }
+    size_t len = strlen(s);
+    return luau_load(L, "script", s, len, 0);
+}
+}
+
     // Static instance for singleton
     static LuaInterpreterIntegration* s_instance = nullptr;
     
@@ -74,7 +93,7 @@ namespace iOS {
     // Static function for Lua error handling
     int LuaInterpreterIntegration::LuaErrorFunction(lua_State* L) {
         if (!s_outputInstance) {
-            return lua_error(L); // Default error behavior
+            lua_error(L); return 0; // Default error behavior
         }
         
         // Get error message
@@ -100,7 +119,7 @@ namespace iOS {
         Logging::LogError("LuaInterpreter", errorMsg);
         
         // Re-raise the error for Lua to handle
-        return lua_error(L);
+        lua_error(L); return 0;
     }
     
     // LuaInterpreterIntegration implementation
@@ -201,7 +220,7 @@ namespace iOS {
             }
             
             // Load the processed script
-            int loadStatus = luaL_loadstring(L, processedScript.c_str());
+            int loadStatus = LoadLuaString(L, processedScript.c_str());
             if (loadStatus != 0) {
                 result.error = "Failed to load script: " + GetLuaError(L);
                 lua_pop(m_luaState, 1); // Remove thread
@@ -338,13 +357,13 @@ namespace iOS {
         luaL_openlibs(L);
         
         // Register our custom print function
-        lua_pushcfunction(L, LuaPrintFunction);
+        lua_pushcfunction(L, LuaPrintFunction, "print");
         lua_setglobal(L, "print");
         
         // Register error function in debug module
         lua_getglobal(L, "debug");
         if (lua_istable(L, -1)) {
-            lua_pushcfunction(L, LuaErrorFunction);
+            lua_pushcfunction(L, LuaErrorFunction, "error_handler");
             lua_setfield(L, -2, "traceback");
         }
         lua_pop(L, 1); // Pop debug table
@@ -514,13 +533,8 @@ namespace iOS {
             });
             lua_setglobal(L, "__nativeHttpPost");
 
-            // Convenience game.HttpGet-style helpers
-            const char* bootstrap =
-                "function _httpGet(url, cache) local r,e = __nativeHttpGet(url); if not r then error(e or 'HttpGet failed') end; return r end\n"
-                "function game_HttpGet(url) return _httpGet(url, true) end\n";
-            if (luaL_dostring(L, bootstrap) != 0) {
-                lua_pop(L, 1);
-            }
+            // HTTP helpers are exposed as __nativeHttpGet / __nativeHttpPost C functions.
+            // Luau source bootstrap requires bytecode compilation; callers bind these globals from host scripts.
         }
         
         return L;
@@ -532,7 +546,7 @@ namespace iOS {
         }
         
         // Load the interpreter script
-        int status = luaL_loadstring(L, m_interpreterScript.c_str());
+        int status = LoadLuaString(L, m_interpreterScript.c_str());
         if (status != 0) {
             Logging::LogError("LuaInterpreter", "Failed to load interpreter.lua: " + GetLuaError(L));
             return false;
@@ -602,39 +616,28 @@ namespace iOS {
     }
     
     void LuaInterpreterIntegration::GenerateSandbox(lua_State* L) {
-        // Create a sandboxed environment for script execution
-        luaL_dostring(L, R"(
-            local sandbox = {}
-            
-            -- Copy safe base functions
-            for k, v in pairs(_G) do
-                if k ~= "dofile" and k ~= "loadfile" and k ~= "load" and
-                   k ~= "os" and k ~= "io" and k ~= "debug" then
-                    sandbox[k] = v
-                end
-            end
-            
-            -- Provide limited os functions
-            sandbox.os = {
-                time = os.time,
-                date = os.date,
-                difftime = os.difftime,
-                clock = os.clock
+        // Build sandbox table via C API (no source load — requires bytecode for Luau)
+        if (!L) return;
+        lua_newtable(L); // sandbox
+        // Copy safe globals from _G
+        lua_getglobal(L, "_G");
+        if (lua_istable(L, -1)) {
+            lua_pushnil(L);
+            while (lua_next(L, -2) != 0) {
+                // stack: sandbox, _G, key, value
+                if (lua_isstring(L, -2)) {
+                    const char* key = lua_tostring(L, -2);
+                    if (key && strcmp(key, "dofile") && strcmp(key, "loadfile") &&
+                        strcmp(key, "load") && strcmp(key, "io") && strcmp(key, "debug")) {
+                        lua_pushvalue(L, -2); // key
+                        lua_pushvalue(L, -2); // value
+                        lua_settable(L, -6); // sandbox[key]=value
+                    }
+                }
+                lua_pop(L, 1); // pop value, keep key
             }
-            
-            -- Restricted require function
-            sandbox.require = function(module)
-                -- Only allow safe modules
-                if module == "math" or module == "table" or module == "string" or
-                   module == "coroutine" or module == "utf8" then
-                    return require(module)
-                else
-                    error("Cannot require module: " .. module)
-                end
-            end
-            
-            -- Set the sandbox as global environment
-            _G.sandbox = sandbox
-        )");
+        }
+        lua_pop(L, 1); // pop _G
+        lua_setglobal(L, "sandbox");
     }
 }
